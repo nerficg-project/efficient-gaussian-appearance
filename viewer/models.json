@@ -1,0 +1,30 @@
+{
+    "baseUrl": "https://huggingface.co/datasets/fhahlbohm/ngsplat/resolve/main",
+    "appearances": ["sh", "sv", "nasg", "nasgabor", "neural"],
+    "models": [
+        { "name": "Bicycle", "group": "Mip-NeRF 360", "id": "bicycle" },
+        { "name": "Flowers", "group": "Mip-NeRF 360", "id": "flowers" },
+        { "name": "Garden", "group": "Mip-NeRF 360", "id": "garden" },
+        { "name": "Stump", "group": "Mip-NeRF 360", "id": "stump" },
+        { "name": "Treehill", "group": "Mip-NeRF 360", "id": "treehill" },
+        { "name": "Bonsai", "group": "Mip-NeRF 360", "id": "bonsai" },
+        { "name": "Counter", "group": "Mip-NeRF 360", "id": "counter" },
+        { "name": "Kitchen", "group": "Mip-NeRF 360", "id": "kitchen" },
+        { "name": "Room", "group": "Mip-NeRF 360", "id": "room" },
+        { "name": "Train", "group": "Tanks and Temples", "id": "train" },
+        { "name": "Truck", "group": "Tanks and Temples", "id": "truck" },
+        { "name": "Dr Johnson", "group": "Deep Blending", "id": "drjohnson" },
+        { "name": "Playroom", "group": "Deep Blending", "id": "playroom" },
+        { "name": "Chair", "group": "NeRF Synthetic", "id": "chair" },
+        { "name": "Drums", "group": "NeRF Synthetic", "id": "drums" },
+        { "name": "Ficus", "group": "NeRF Synthetic", "id": "ficus" },
+        { "name": "Hotdog", "group": "NeRF Synthetic", "id": "hotdog" },
+        { "name": "Lego", "group": "NeRF Synthetic", "id": "lego" },
+        { "name": "Materials", "group": "NeRF Synthetic", "id": "materials" },
+        { "name": "Mic", "group": "NeRF Synthetic", "id": "mic" },
+        { "name": "Ship", "group": "NeRF Synthetic", "id": "ship" },
+        { "name": "Bicycle", "group": "Paper Benchmark", "url": "https://huggingface.co/datasets/fhahlbohm/ngsplat/resolve/main/neural/bicycle.ngsplat", "appearance": "neural" },
+        { "name": "Stump", "group": "Paper Benchmark", "url": "https://huggingface.co/datasets/fhahlbohm/ngsplat/resolve/main/neural/stump.ngsplat", "appearance": "neural" },
+        { "name": "Bonsai", "group": "Paper Benchmark", "url": "https://huggingface.co/datasets/fhahlbohm/ngsplat/resolve/main/neural/bonsai.ngsplat", "appearance": "neural" }
+    ]
+}

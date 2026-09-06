@@ -1,0 +1,3 @@
+[submodule "FasterGSVDACudaBackend/tiny-cuda-nn"]
+	path = FasterGSVDACudaBackend/tiny-cuda-nn
+	url = ../../NVlabs/tiny-cuda-nn

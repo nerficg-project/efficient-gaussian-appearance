@@ -1,0 +1,132 @@
+#pragma once
+
+#include "appearance.h"
+#include <torch/extension.h>
+#include <tuple>
+
+namespace faster_gs::rasterization {
+
+    std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, int, int, int>
+    forward_wrapper(
+        Rasterizer& rasterizer,
+        const torch::Tensor& means,
+        const torch::Tensor& scales,
+        const torch::Tensor& rotations,
+        const torch::Tensor& opacities,
+        const torch::Tensor& precomputed_colors,
+        const torch::Tensor& base_colors,
+        const torch::Tensor& residual_params,
+        const torch::Tensor& mlp_weights,
+        const torch::Tensor& w2c,
+        const torch::Tensor& cam_position,
+        const torch::Tensor& bg_color,
+        const int appearance_degree,
+        const int width,
+        const int height,
+        const float focal_x,
+        const float focal_y,
+        const float center_x,
+        const float center_y,
+        const float near_plane,
+        const float far_plane,
+        const bool proper_antialiasing,
+        const bool render_base,
+        const bool render_residual);
+
+    std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+    backward_wrapper(
+        Rasterizer& rasterizer,
+        torch::Tensor& densification_info,
+        const torch::Tensor& grad_image,
+        const torch::Tensor& image,
+        const torch::Tensor& means,
+        const torch::Tensor& scales,
+        const torch::Tensor& rotations,
+        const torch::Tensor& opacities,
+        const torch::Tensor& precomputed_colors,
+        const torch::Tensor& base_colors,
+        const torch::Tensor& residual_params,
+        const torch::Tensor& mlp_weights,
+        const torch::Tensor& mlp_outputs,
+        const torch::Tensor& fwd_ctx,
+        const torch::Tensor& primitive_buffers,
+        const torch::Tensor& tile_buffers,
+        const torch::Tensor& instance_buffers,
+        const torch::Tensor& bucket_buffers,
+        const torch::Tensor& w2c,
+        const torch::Tensor& cam_position,
+        const torch::Tensor& bg_color,
+        const int appearance_degree,
+        const int width,
+        const int height,
+        const float focal_x,
+        const float focal_y,
+        const float center_x,
+        const float center_y,
+        const float near_plane,
+        const float far_plane,
+        const bool proper_antialiasing,
+        const bool render_base,
+        const bool render_residual,
+        const int n_instances,
+        const int n_buckets,
+        const int instance_primitive_indices_selector);
+
+    torch::Tensor
+    inference_wrapper(
+        Rasterizer& rasterizer,
+        const torch::Tensor& means,
+        const torch::Tensor& scales,
+        const torch::Tensor& rotations,
+        const torch::Tensor& opacities,
+        const torch::Tensor& precomputed_colors,
+        const torch::Tensor& base_colors,
+        const torch::Tensor& residual_params,
+        const torch::Tensor& mlp_weights,
+        const torch::Tensor& w2c,
+        const torch::Tensor& cam_position,
+        const torch::Tensor& bg_color,
+        const int appearance_degree,
+        const int width,
+        const int height,
+        const float focal_x,
+        const float focal_y,
+        const float center_x,
+        const float center_y,
+        const float near_plane,
+        const float far_plane,
+        const bool proper_antialiasing,
+        const bool render_base,
+        const bool render_residual,
+        const bool to_chw,
+        const bool clamp_output);
+
+    void
+    pruning_scores_wrapper(
+        Rasterizer& rasterizer,
+        torch::Tensor& scores,
+        const torch::Tensor& means,
+        const torch::Tensor& scales,
+        const torch::Tensor& rotations,
+        const torch::Tensor& opacities,
+        const torch::Tensor& precomputed_colors,
+        const torch::Tensor& base_colors,
+        const torch::Tensor& residual_params,
+        const torch::Tensor& mlp_weights,
+        const torch::Tensor& w2c,
+        const torch::Tensor& cam_position,
+        const torch::Tensor& bg_color,
+        const int appearance_degree,
+        const int width,
+        const int height,
+        const float focal_x,
+        const float focal_y,
+        const float center_x,
+        const float center_y,
+        const float near_plane,
+        const float far_plane,
+        const bool proper_antialiasing,
+        const bool render_base,
+        const bool render_residual);
+
+}

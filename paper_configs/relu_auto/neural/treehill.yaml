@@ -1,0 +1,157 @@
+GLOBAL:
+    LOG_LEVEL: 2
+    GPU_INDICES:
+    - 0
+    RANDOM_SEED: 0
+    ANOMALY_DETECTION: false
+    FILTER_WARNINGS: true
+    METHOD_TYPE: FasterGSVDA
+    DATASET_TYPE: MipNeRF360
+MODEL:
+    APPEARANCE:
+        TYPE: Neural  # class name of an appearance model from Methods/FasterGSVDA/Appearance ('SH', 'SV', 'NASG', 'NASGabor', 'Neural')
+        BASE_ACTIVATION: none  # 'none' or 'exp' (exp(3x))
+        RESIDUAL_ACTIVATION: tanh  # 'none', 'tanh', or 'softplus' (beta=10)
+        COLOR_ACTIVATION: relu  # 'none', 'relu', 'softplus' (beta=10), 'sigmoid' (sigmoid(4x)), 'hardsigmoid' (clamp(x + 0.5, 0, 1)), or 'satexp' (1 - exp(-x))
+        DIRECTION_GRADIENT: true  # backpropagate the color gradient through the view direction onto the 3d mean (jit-compiled constant); the SV reference does with Gaussian kernels, but not with beta kernels
+        SH:
+            SH_DEGREE: 3
+        SV:
+            N_SITES: 7  # reference default with Gaussian kernels (the beta-kernel variant uses 8)
+        NASG:
+            N_LOBES: 1
+        NASGABOR:
+            N_LOBES: 1
+        NEURAL:
+            FEATURE_DIM: 8
+            BASE_INPUT: false  # if True, base colors replace 3 of the FEATURE_DIM mlp inputs, leaving FEATURE_DIM - 3 learned features
+            FEATURE_N_FREQUENCIES: 1  # 0: raw features; k>0: NeRF-style frequency encoding (encoded dims = FEATURE_DIM * 2 * k)
+            SH_DEGREES: [0, 1, 2, 3]  # degrees of the SH bands used to encode the view direction; enabled one by one every 1000 training steps
+            N_NEURONS: 16
+            N_HIDDEN_LAYERS: 2
+            HIDDEN_ACTIVATION: ReLU
+    PPISP:
+        USE: true
+        CONTROLLER_TRAINING_STEPS: 5_000
+        CONTROLLER_DISTILLATION: true
+RENDERER:
+    SCALE_MODIFIER: 1.0
+    PROPER_ANTIALIASING: false
+    RENDER_BASE_COLOR: true  # if False, the view-independent base color is omitted from the rendered color
+    RENDER_RESIDUAL_COLOR: true  # if False, the view-dependent residual is omitted from the rendered color
+    USE_FUSED_APPEARANCE: true  # if False, colors are precomputed outside the rasterizer
+    FORCE_OPTIMIZED_INFERENCE: false
+TRAINING:
+    LOAD_CHECKPOINT: null
+    MODEL_NAME: paper_configs/relu_auto/neural/m360/treehill
+    NUM_ITERATIONS: 30_000
+    RUN_VALIDATION: false
+    DATA:
+        PRELOADING_LEVEL: 2  # 2: store training images in VRAM, 1: in RAM, 0: no preloading
+        FIELDS: ['rgb', 'alpha']
+        PRECOMPUTE_RAYS: false
+        RAYS_TO_DEVICE: false
+    BACKUP:
+        FINAL_CHECKPOINT: true
+        RENDER_TESTSET: true
+        RENDER_TRAINSET: false
+        RENDER_VALSET: false
+        INTERMEDIATE_RENDERINGS: true
+        VISUALIZE_ERRORS: false
+        INTERVAL: -1
+        TRAINING_STATE: false
+    TIMING:
+        ACTIVATE: true
+        INCLUDE_DATALOADING_IN_TOTAL: false
+        INCLUDE_PRETRAINING_IN_TOTAL: false
+        INCLUDE_POSTTRAINING_IN_TOTAL: false
+    WANDB:
+        ACTIVATE: false
+        ENTITY: null
+        PROJECT: faster_gs
+        LOG_IMAGES: true
+        INDEX_VALIDATION: -1
+        INDEX_TRAINING: -1
+        INTERVAL: 500
+        SWEEP_MODE:
+            ACTIVE: false
+            START_ITERATION: 999
+            ITERATION_STRIDE: 1000
+            NUM_IMAGES: -1
+    WRITE_VRAM_STATS: true
+    GUI:
+        ACTIVATE: false
+        RENDER_INTERVAL: 10
+        GUI_STATUS_ENABLED: true
+        GUI_STATUS_INTERVAL: 20
+        SKIP_GUI_SETUP: false
+        FPS_ROLLING_AVERAGE_SIZE: 100
+    DENSIFICATION_START_ITERATION: 600  # while official code states 500, densification actually starts at 600 there
+    DENSIFICATION_END_ITERATION: 24_900  # should be set to 14900 when using ADC; while official code states 15000, densification actually stops at 14900 there
+    DENSIFICATION_INTERVAL: 100
+    DENSIFICATION_GRAD_THRESHOLD: 0.0002  # only used when USE_MCMC=False
+    DENSIFICATION_PERCENT_DENSE: 0.01  # only used when USE_MCMC=False
+    SPEEDYSPLAT_PRUNING:
+        USE: false  # only used when USE_MCMC=False
+        START_ITERATION: 6_000
+        END_ITERATION: 30_000
+        INTERVAL: 3_000
+        SOFT_PRUNING_RATIO: 0.8
+        HARD_PRUNING_RATIO: 0.3
+    USE_MCMC: true
+    MAX_PRIMITIVES: 3_500_000  # only used when USE_MCMC=True
+    OPACITY_RESET_INTERVAL: 3_000  # will be skipped when USE_MCMC=True
+    EXTRA_OPACITY_RESET_ITERATION: 500  # will be skipped when USE_MCMC=True
+    MORTON_ORDERING_INTERVAL: 5_000  # lowering to 2500 or 1000 may improve performance when number of Gaussians is high
+    MORTON_ORDERING_END_ITERATION: 25_000  # should be set to 15000 when using ADC
+    FILTER_3D:
+        USE: false
+        ORIGINAL_FORMULATION: false  # if True, the original formulation from the Mip-Splatting paper is used
+        FILTER_VARIANCE: 0.2
+    USE_RANDOM_BACKGROUND_COLOR: false  # prevents the model from overfitting to the background color
+    MIN_OPACITY_AFTER_TRAINING: 0.00392156862745098
+    RANDOM_INITIALIZATION:
+        FORCE: false  # if True, the point cloud from the dataset will be ignored
+        N_POINTS: 100_000  # number of random points to be sampled within the scene bounding box
+        ENABLE_CARVING: true  # removes points that are never in-frustum in any training view
+        CARVING_IN_ALL_FRUSTUMS: false  # removes points not in-frustum in all views
+        CARVING_ENFORCE_ALPHA: false  # removes points that project to a pixel with alpha=0 in any view where the point is in-frustum
+    LOSS:
+        LAMBDA_L1: 0.8  # weight for the per-pixel L1 loss on the rgb image
+        LAMBDA_DSSIM: 0.2  # weight for the DSSIM loss on the rgb image
+        LAMBDA_OPACITY_REGULARIZATION: 0.01  # should be set to 0.0 when using ADC
+        LAMBDA_SCALE_REGULARIZATION: 0.01  # should be set to 0.0 when using ADC
+    OPTIMIZER:
+        LEARNING_RATE_MEANS_INIT: 0.00016
+        LEARNING_RATE_MEANS_FINAL: 1.6e-06
+        LEARNING_RATE_MEANS_MAX_STEPS: 30_000
+        LEARNING_RATE_SCALES: 0.005
+        LEARNING_RATE_ROTATIONS: 0.001
+        LEARNING_RATE_OPACITIES: 0.05  # use 0.025 with ADC
+        LEARNING_RATE_BASE_COLORS: 0.00025
+        LEARNING_RATE_RESIDUAL_PARAMS: 0.008
+        LEARNING_RATE_SV_SITES: 0.002  # only used with the SV appearance
+        LEARNING_RATE_SV_TAUS: 0.006  # only used with the SV appearance
+        LEARNING_RATE_SV_COLORS: 0.0008  # only used with the SV appearance
+        LEARNING_RATE_MLP_WEIGHTS: 0.003  # only used with the Neural appearance (decayed to 0.1x over training)
+        AUTO_OPACITY_LEARNING_RATE: true  # scales the opacity learning rate within 0.025 and 0.05 based on the training view distribution
+        APPEARANCE_COSINE_DECAY:
+            USE: true  # cosine-decays the base color + residual param lrs (SV instead: sites + temperatures, all colors constant like its reference)
+            START_ITERATION: 7_000  # decay start; SV reference: 1000
+            MAX_STEPS: 37_000  # decay end, zero lr after; NASG/NASGabor reference: full iteration count (~13% of the initial lr left at 30k), SV reference: NUM_ITERATIONS - 3000 (freezing the geometry there too)
+            FINAL_FACTOR: 0.0  # fraction of the initial lr reached at MAX_STEPS; SV reference: 0.1
+            WARMUP_FACTOR: 1.0  # fraction of the initial lr before START_ITERATION (0 = frozen warmup); SV reference: 0
+DATASET:
+    PATH: dataset/mipnerf360/treehill
+    IMAGE_SCALE_FACTOR: 0.25
+    NORMALIZE_CUBE: null
+    NORMALIZE_RECENTER: false
+    BACKGROUND_COLOR:
+    - 0.0
+    - 0.0
+    - 0.0
+    NEAR_PLANE: 0.2
+    FAR_PLANE: 10000.0
+    TEST_STEP: 8
+    APPLY_PCA: false  # aligns the scene, usually disabled for benchmarks
+    APPLY_PCA_RESCALE: false

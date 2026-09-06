@@ -1,0 +1,20 @@
+{
+    "sh": {
+        "shDegree": 3
+    },
+    "sv": {
+        "nSites": 7
+    },
+    "nasg": {
+        "nLobes": 1
+    },
+    "nasgabor": {
+        "nLobes": 1
+    },
+    "neural": {
+        "featureDim": 16,
+        "degrees": [0, 1, 2, 3],
+        "nNeurons": 16,
+        "nHiddenLayers": 2
+    }
+}
