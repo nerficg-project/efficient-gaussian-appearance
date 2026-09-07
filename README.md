@@ -151,9 +151,9 @@ If you use this project in your research, please cite our paper:
   title         = {Compact Neural Appearance Models for Efficient Gaussian Splatting},
   author        = {Florian Hahlbohm and Jorge Condor and Linus Franke and Martin Eisemann and Marcus Magnor},
   year          = {2026},
-  eprint        = {2609.xxxxx},
+  eprint        = {2609.05255},
   archivePrefix = {arXiv},
   primaryClass  = {cs.CV},
-  url           = {https://arxiv.org/abs/2609.xxxxx},
+  url           = {https://arxiv.org/abs/2609.05255},
 }
 ```
