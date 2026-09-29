@@ -9,7 +9,7 @@ import Framework
 from Cameras.Perspective import PerspectiveCamera
 from CudaUtils.MortonEncoding import morton_encode
 from Datasets.Base import BaseDataset
-from Datasets.utils import BasicPointCloud
+from Datasets.utils import BasicPointCloud, View
 from Logging import Logger
 from Methods.Base.Model import BaseModel
 from Cameras.utils import quaternion_to_rotation_matrix
@@ -106,7 +106,7 @@ class Gaussians(torch.nn.Module):
         """Returns the raw appearance parameters for the fused rasterizer kernels."""
         return self.appearance.raw_parameters
 
-    def precomputed_colors(self, view, render_base: bool = True, render_residual: bool = True) -> dict[str, torch.Tensor]:
+    def precomputed_colors(self, view: View, render_base: bool = True, render_residual: bool = True) -> dict[str, torch.Tensor]:
         """Computes the primitive colors outside the rasterizer (reference/debug path)."""
         return self.appearance.precomputed_colors(self._means, view, render_base, render_residual)
 

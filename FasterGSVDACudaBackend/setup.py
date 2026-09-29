@@ -86,7 +86,7 @@ else:
     # patch an upstream tiny-cuda-nn bug in the JIT backward: the generated hidden layers store
     # POST-activation values in the forward context (network.cu: activate() before the ctx store),
     # but mma.h's activate_bwd computed the activation derivative via vec_activation_backward_in,
-    # which expects PRE-activation inputs -- i.e. it evaluates f'(f(x)) instead of f'(x). This is
+    # which expects PRE-activation inputs, i.e., it evaluates f'(f(x)) instead of f'(x). This is
     # coincidentally correct for sign-preserving activations (ReLU/LeakyReLU/None, derivative
     # depends only on the argument's sign) but wrong for all smooth hidden activations
     # (Softplus/Squareplus/Sigmoid/Tanh). Fixed by recovering the derivative from the stored

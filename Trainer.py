@@ -61,7 +61,7 @@ from Optim.Samplers.DatasetSamplers import DatasetSampler
         LEARNING_RATE_MEANS_MAX_STEPS=30_000,
         LEARNING_RATE_SCALES=0.005,
         LEARNING_RATE_ROTATIONS=0.001,
-        LEARNING_RATE_OPACITIES=0.05,  # use 0.025 with ADC
+        LEARNING_RATE_OPACITIES=0.025,  # use 0.05 (old default in official code) with MCMC densification or Speedy-Splat pruning to match the respective paper
         LEARNING_RATE_BASE_COLORS=0.000705237,  # 0.0025 * SH_C0; NASG/NASGabor and Neural use 0.00025
         LEARNING_RATE_RESIDUAL_PARAMS=0.000125,  # 0.0025 / 20; NASG/NASGabor use 0.0025 (always scaled by the training view spacing), Neural 0.008
         LEARNING_RATE_SV_SITES=0.002,  # only used with the SV appearance

@@ -144,7 +144,6 @@ class _Rasterize(torch.autograd.Function):
         ctx: Any,
         grad_image: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor | None, torch.Tensor | None, torch.Tensor | None, torch.Tensor | None, None, None]:
-        settings = ctx.rasterizer_settings
         (
             grad_means, grad_scales, grad_rotations, grad_opacities,
             grad_precomputed_colors, grad_base_colors, grad_residual_params, grad_mlp_weights
@@ -153,7 +152,7 @@ class _Rasterize(torch.autograd.Function):
             ctx.densification_info,
             grad_image,
             *ctx.saved_tensors,
-            *settings.as_tuple(),
+            *ctx.rasterizer_settings.as_tuple(),
             *ctx.buffer_state,
         )
         return (

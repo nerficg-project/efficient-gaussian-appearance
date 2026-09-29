@@ -10,7 +10,7 @@
 //
 // neural only: backward_eval_model consumes the forward context written by the forward preprocess kernel,
 // accumulates loss-scaled parameter gradients via block-wide reduction + atomics (requires the
-// dynamic shared memory the launcher passes), and returns input gradients via dL_dx — no early
+// dynamic shared memory the launcher passes), and returns input gradients via dL_dx, no early
 // exits are allowed before it
 //
 // JIT_KERNEL_NAME expands to preprocess_backward_{precomputed|sh|sv|nasgabor|neural}_cu so the compiled
