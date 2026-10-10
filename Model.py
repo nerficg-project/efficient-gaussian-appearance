@@ -112,7 +112,7 @@ class Gaussians(torch.nn.Module):
 
     @property
     def densification_info(self) -> torch.Tensor:
-        """Returns the current densification info buffers (2, N)."""
+        """Returns the current densification info buffers (2 or 3, N): [visibility count, grad, (absgrad)]."""
         return self._densification_info
 
     @property
@@ -288,13 +288,22 @@ class Gaussians(torch.nn.Module):
         if self._filter_3d is not None:
             self._filter_3d = self._filter_3d[ordering].contiguous()
 
-    def reset_densification_info(self) -> None:
+    def reset_densification_info(self, use_abs_grad: bool) -> None:
         """Resets the densification info buffers to zero."""
-        self._densification_info = torch.zeros((2, self._means.shape[0]), dtype=torch.float32, device='cuda')
+        n_rows = 3 if use_abs_grad else 2
+        self._densification_info = torch.zeros((n_rows, self._means.shape[0]), dtype=torch.float32, device='cuda')
 
     def adaptive_density_control(self, grad_threshold: float, min_opacity: float, prune_large_gaussians: bool) -> None:
         """Densify Gaussians and prune those that are not visible or too large."""
-        densification_mask = self.densification_info[1] >= grad_threshold * self.densification_info[0].clamp_min(1.0)
+        denominator = self.densification_info[0].clamp_min(1.0)
+        densification_mask = self.densification_info[1] >= grad_threshold * denominator
+        if self.densification_info.shape[0] == 3:
+            # absolute gradient densification from AbsGS using the selection strategy of Gaussian Opacity Fields
+            n_selected = densification_mask.sum().item()
+            if n_selected > 0:
+                grads_abs = self.densification_info[2] / denominator
+                abs_grad_threshold = grads_abs.kthvalue(grads_abs.shape[0] - n_selected + 1).values
+                densification_mask |= grads_abs >= abs_grad_threshold
         is_small = torch.max(self._scales, dim=1).values <= math.log(self.percent_dense * self.training_cameras_extent)
 
         # duplicate small gaussians

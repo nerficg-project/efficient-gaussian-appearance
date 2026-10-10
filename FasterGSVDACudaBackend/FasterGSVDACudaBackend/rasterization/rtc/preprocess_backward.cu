@@ -28,6 +28,7 @@ __global__ void JIT_KERNEL_NAME(
     const float3* __restrict__ primitive_color,
     const float2* __restrict__ grad_mean2d,
     const float* __restrict__ grad_conic,
+    const float2* __restrict__ grad_mean2d_abs,
     const float* __restrict__ grad_color,
     float3* __restrict__ grad_means,
     float3* __restrict__ grad_scales,
@@ -274,6 +275,14 @@ __global__ void JIT_KERNEL_NAME(
             dL_dmean2d.y * height
         );
         densification_info[n_primitives + primitive_idx] += norm(dL_dmean2d_ndc);
+        if (grad_mean2d_abs != nullptr) {
+            const float2 dL_dmean2d_abs = grad_mean2d_abs[primitive_idx];
+            const float2 dL_dmean2d_abs_ndc = 0.5f * make_float2(
+                dL_dmean2d_abs.x * width,
+                dL_dmean2d_abs.y * height
+            );
+            densification_info[2 * n_primitives + primitive_idx] += norm(dL_dmean2d_abs_ndc);
+        }
     }
 
     // mean3d camera space gradient from mean2d

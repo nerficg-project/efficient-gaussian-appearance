@@ -169,6 +169,9 @@ faster_gs::rasterization::backward_wrapper(
     torch::Tensor grad_mean2d_helper = torch::zeros({n_primitives, 2}, float_options);
     torch::Tensor grad_conic_helper = torch::zeros({3, n_primitives}, float_options);
     torch::Tensor grad_color_helper = torch::zeros({3, n_primitives}, float_options);
+    const bool compute_abs_grad = densification_info.size(0) == 3;
+    torch::Tensor grad_mean2d_abs_helper;
+    if (compute_abs_grad) grad_mean2d_abs_helper = torch::zeros({n_primitives, 2}, float_options);
 
     const bool precomputed = precomputed_colors.numel() > 0;
     const bool fused_mlp = !precomputed && rasterizer.is_neural();
@@ -206,6 +209,7 @@ faster_gs::rasterization::backward_wrapper(
         reinterpret_cast<char*>(bucket_buffers.data_ptr()),
         reinterpret_cast<float2*>(grad_mean2d_helper.data_ptr<float>()),
         grad_conic_helper.data_ptr<float>(),
+        compute_abs_grad ? reinterpret_cast<float2*>(grad_mean2d_abs_helper.data_ptr<float>()) : nullptr,
         grad_color_helper.data_ptr<float>(),
         reinterpret_cast<float3*>(grad_means.data_ptr<float>()),
         reinterpret_cast<float3*>(grad_scales.data_ptr<float>()),

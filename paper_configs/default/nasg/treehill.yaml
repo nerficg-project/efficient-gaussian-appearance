@@ -91,6 +91,7 @@ TRAINING:
     DENSIFICATION_INTERVAL: 100
     DENSIFICATION_GRAD_THRESHOLD: 0.0002  # only used when USE_MCMC=False
     DENSIFICATION_PERCENT_DENSE: 0.01  # only used when USE_MCMC=False
+    DENSIFICATION_USE_ABS_GRAD: false  # only used when USE_MCMC=False
     SPEEDYSPLAT_PRUNING:
         USE: false  # only used when USE_MCMC=False
         START_ITERATION: 6_000

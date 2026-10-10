@@ -21,6 +21,7 @@ from Optim.Samplers.DatasetSamplers import DatasetSampler
     DENSIFICATION_INTERVAL=100,
     DENSIFICATION_GRAD_THRESHOLD=0.0002,  # only used when USE_MCMC=False
     DENSIFICATION_PERCENT_DENSE=0.01,  # only used when USE_MCMC=False
+    DENSIFICATION_USE_ABS_GRAD=False,  # only used when USE_MCMC=False
     SPEEDYSPLAT_PRUNING=Framework.ConfigParameterList(
         USE=False,  # only used when USE_MCMC=False
         START_ITERATION=6_000,
@@ -127,7 +128,7 @@ class FasterGSVDATrainer(GuiTrainer):
         self.model.gaussians.initialize_from_point_cloud(point_cloud, self.USE_MCMC)
         self.model.gaussians.training_setup(self, radius)
         if not self.USE_MCMC:
-            self.model.gaussians.reset_densification_info()
+            self.model.gaussians.reset_densification_info(self.DENSIFICATION_USE_ABS_GRAD)
         if self.FILTER_3D.USE:
             self.model.gaussians.setup_3d_filter(self.FILTER_3D, dataset)
         if self.model.ppisp is not None:
@@ -155,7 +156,7 @@ class FasterGSVDATrainer(GuiTrainer):
                 self.model.gaussians.importance_pruning(scores, pruning_ratio=self.SPEEDYSPLAT_PRUNING.SOFT_PRUNING_RATIO)
 
             if iteration < self.DENSIFICATION_END_ITERATION:
-                self.model.gaussians.reset_densification_info()
+                self.model.gaussians.reset_densification_info(self.DENSIFICATION_USE_ABS_GRAD)
         if self.requires_empty_cache:
             torch.cuda.empty_cache()
         if self.FILTER_3D.USE:

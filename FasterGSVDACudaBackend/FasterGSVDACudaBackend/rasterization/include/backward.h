@@ -26,6 +26,7 @@ namespace faster_gs::rasterization {
         char* bucket_buffers_blob,
         float2* grad_mean2d_helper,
         float* grad_conic_helper,
+        float2* grad_mean2d_abs_helper,
         float* grad_color_helper,
         float3* grad_means,
         float3* grad_scales,
