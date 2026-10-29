@@ -67,7 +67,7 @@ namespace faster_gs {
     __device__ inline float3 sh_residual_backward(
         const float3* __restrict__ sh_coefficients_rest,
         const float3& grad_color,
-        float3* __restrict__ grad_sh_coefficients_rest,
+        float3* __restrict__ grad_coefficients_ptr,
         const float3& position,
         const float3& cam_position,
         const uint32_t primitive_idx,
@@ -76,9 +76,7 @@ namespace faster_gs {
         // computation adapted from https://github.com/NVlabs/tiny-cuda-nn/blob/212104156403bd87616c1a4f73a1c5f2c2e172a9/include/tiny-cuda-nn/common_device.h#L421
         if (active_sh_degree == 0) return ::make_float3(0.0f, 0.0f, 0.0f);
 
-        const uint32_t coefficients_base_idx = primitive_idx * JIT_SH_REST_BASES;
-        const float3* coefficients_ptr = sh_coefficients_rest + coefficients_base_idx;
-        float3* grad_coefficients_ptr = grad_sh_coefficients_rest + coefficients_base_idx;
+        const float3* coefficients_ptr = sh_coefficients_rest + primitive_idx * JIT_SH_REST_BASES;
         float direction_norm_rcp;
         const float3 direction = normalize(position - cam_position, direction_norm_rcp);
         const float x = direction.x, y = direction.y, z = direction.z;

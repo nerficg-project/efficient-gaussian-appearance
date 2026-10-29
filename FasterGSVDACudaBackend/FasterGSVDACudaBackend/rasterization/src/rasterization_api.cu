@@ -158,13 +158,16 @@ faster_gs::rasterization::backward_wrapper(
 {
     const int n_primitives = means.size(0);
     const torch::TensorOptions float_options = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA);
+    const bool precomputed = precomputed_colors.numel() > 0;
+    const bool fused_mlp = !precomputed && rasterizer.is_neural();
     torch::Tensor grad_means = torch::zeros_like(means);
     torch::Tensor grad_scales = torch::zeros_like(scales);
     torch::Tensor grad_rotations = torch::zeros_like(rotations);
     torch::Tensor grad_opacities = torch::zeros_like(opacities);
     torch::Tensor grad_precomputed_colors = torch::zeros_like(precomputed_colors);
     torch::Tensor grad_base_colors = torch::zeros_like(base_colors);
-    torch::Tensor grad_residual_params = torch::zeros_like(residual_params);
+    // the fused appearance backward writes the residual gradients of every primitive
+    torch::Tensor grad_residual_params = precomputed ? torch::zeros_like(residual_params) : torch::empty_like(residual_params);
     torch::Tensor grad_mlp_weights = torch::zeros_like(mlp_weights);
     torch::Tensor grad_mean2d_helper = torch::zeros({n_primitives, 2}, float_options);
     torch::Tensor grad_conic_helper = torch::zeros({3, n_primitives}, float_options);
@@ -173,8 +176,6 @@ faster_gs::rasterization::backward_wrapper(
     torch::Tensor grad_mean2d_abs_helper;
     if (compute_abs_grad) grad_mean2d_abs_helper = torch::zeros({n_primitives, 2}, float_options);
 
-    const bool precomputed = precomputed_colors.numel() > 0;
-    const bool fused_mlp = !precomputed && rasterizer.is_neural();
     if (fused_mlp) rasterizer.upload_params(mlp_weights);
     const AppearanceInputs appearance {
         precomputed ? reinterpret_cast<const float3*>(precomputed_colors.data_ptr<float>()) : nullptr,

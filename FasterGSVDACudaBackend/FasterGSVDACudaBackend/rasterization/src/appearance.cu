@@ -116,6 +116,7 @@ namespace faster_gs::rasterization {
         preamble << "constexpr uint32_t tile_width = " << config::tile_width << "u;\n";
         preamble << "constexpr uint32_t tile_height = " << config::tile_height << "u;\n";
         preamble << "constexpr uint32_t n_sequential_threshold = " << config::n_sequential_threshold << "u;\n";
+        preamble << "constexpr uint32_t block_size_preprocess = " << config::block_size_preprocess << "u;\n";
         preamble << "} }\n";
 
         // the kernel sources (and the appearance struct header) are inlined into a single string (instead of using

@@ -57,10 +57,17 @@ __global__ void JIT_KERNEL_NAME(
     // no early exits are allowed before the mlp backward: its parameter gradient reduction is block-wide,
     // so every thread of the block must reach it (non-contributing lanes carry zero gradients, and warps
     // culled in the forward pass read the forward context segment they zeroed themselves before exiting)
-    uint32_t primitive_idx = thread_idx;
-    bool contributes = primitive_idx < n_primitives;
-    if (!contributes) primitive_idx = n_primitives - 1;
-    contributes = contributes && primitive_n_touched_tiles[primitive_idx] > 0;
+    const uint32_t lane_idx = threadIdx.x % 32;
+    const bool valid = thread_idx < n_primitives;
+    const uint32_t primitive_idx = valid ? thread_idx : n_primitives - 1;
+    const bool contributes = valid && primitive_n_touched_tiles[primitive_idx] > 0;
+#elif JIT_APPEARANCE_MODEL != 0
+    // threads stay alive until the warp-wide residual gradient write below
+    const uint32_t lane_idx = threadIdx.x % 32;
+    if (thread_idx - lane_idx >= n_primitives) return;
+    const bool valid = thread_idx < n_primitives;
+    const uint32_t primitive_idx = valid ? thread_idx : n_primitives - 1;
+    const bool contributes = valid && primitive_n_touched_tiles[primitive_idx] > 0;
 #else
     const uint32_t primitive_idx = thread_idx;
     if (primitive_idx >= n_primitives || primitive_n_touched_tiles[primitive_idx] == 0) return;
@@ -86,35 +93,61 @@ __global__ void JIT_KERNEL_NAME(
     float3 dL_dmean3d_from_color = ::make_float3(0.0f, 0.0f, 0.0f);
 #if JIT_APPEARANCE_MODEL == 0
     grad_appearance.precomputed_colors[primitive_idx] = dL_dcolor;
-#elif JIT_APPEARANCE_MODEL == 1
-    dL_dmean3d_from_color = sh_residual_backward(
+#else
+    // residual parameters per primitive and those used at the current appearance degree
+#if JIT_APPEARANCE_MODEL == 1
+    constexpr uint32_t n_residual_params = 3 * JIT_SH_REST_BASES;
+    const uint32_t n_active_residual_params = 3 * ((appearance_degree + 1) * (appearance_degree + 1) - 1);
+#elif JIT_APPEARANCE_MODEL == 2
+    constexpr uint32_t n_residual_params = sv_params_per_site * JIT_SV_N_SITES;
+    const uint32_t n_active_residual_params = sv_params_per_site * appearance_degree;
+#elif JIT_APPEARANCE_MODEL == 3
+    constexpr uint32_t n_residual_params = nasg_params_per_lobe * JIT_NASG_N_LOBES;
+    const uint32_t n_active_residual_params = nasg_params_per_lobe * appearance_degree;
+#elif JIT_APPEARANCE_MODEL == 4
+    constexpr uint32_t n_residual_params = nasgabor_params_per_lobe * JIT_NASGABOR_N_LOBES;
+    const uint32_t n_active_residual_params = nasgabor_params_per_lobe * appearance_degree;
+#elif JIT_APPEARANCE_MODEL == 5
+    constexpr uint32_t n_residual_params = JIT_N_FEATURE_DIMS;
+    const uint32_t n_active_residual_params = appearance_degree > 0 ? JIT_N_FEATURE_DIMS : 0;
+#endif
+
+    // residual gradients are collected in shared memory for a coalesced write unless they exceed the static maximum
+    // of 48 KiB (32 KiB for neural, leaving room for the dynamic shared memory of the mlp backward)
+    constexpr bool collect_residual_gradients = n_residual_params > 0 && n_residual_params * config::block_size_preprocess * sizeof(float) <= (JIT_APPEARANCE_MODEL == 5 ? 32768 : 49152);
+    __shared__ __align__(16) float collected_grad_residual_params[collect_residual_gradients ? config::block_size_preprocess * n_residual_params : 1];
+    float* grad_residual_params_primitive = collect_residual_gradients
+        ? collected_grad_residual_params + threadIdx.x * n_residual_params
+        : grad_appearance.residual_params + primitive_idx * n_residual_params;
+#if JIT_APPEARANCE_MODEL == 1
+    if (contributes) dL_dmean3d_from_color = sh_residual_backward(
         reinterpret_cast<const float3*>(appearance.residual_params),
         dL_dpre,
-        reinterpret_cast<float3*>(grad_appearance.residual_params),
+        reinterpret_cast<float3*>(grad_residual_params_primitive),
         mean3d, cam_position[0], primitive_idx,
         appearance_degree
     );
 #elif JIT_APPEARANCE_MODEL == 2
-    dL_dmean3d_from_color = sv_residual_backward(
+    if (contributes) dL_dmean3d_from_color = sv_residual_backward(
         appearance.residual_params,
         dL_dpre,
-        grad_appearance.residual_params,
+        grad_residual_params_primitive,
         mean3d, cam_position[0], primitive_idx,
         appearance_degree
     );
 #elif JIT_APPEARANCE_MODEL == 3
-    dL_dmean3d_from_color = nasg_residual_backward(
+    if (contributes) dL_dmean3d_from_color = nasg_residual_backward(
         appearance.residual_params,
         dL_dpre,
-        grad_appearance.residual_params,
+        grad_residual_params_primitive,
         mean3d, cam_position[0], primitive_idx,
         appearance_degree
     );
 #elif JIT_APPEARANCE_MODEL == 4
-    dL_dmean3d_from_color = nasgabor_residual_backward(
+    if (contributes) dL_dmean3d_from_color = nasgabor_residual_backward(
         appearance.residual_params,
         dL_dpre,
-        grad_appearance.residual_params,
+        grad_residual_params_primitive,
         mean3d, cam_position[0], primitive_idx,
         appearance_degree
     );
@@ -123,11 +156,27 @@ __global__ void JIT_KERNEL_NAME(
         appearance,
         dL_dpre,
         grad_appearance,
+        grad_residual_params_primitive,
         mean3d, cam_position[0], fwd_ctx,
         primitive_idx, n_primitives,
         appearance_degree,
         contributes
     );
+#endif
+    // zero the gradients of inactive residual parameters and invisible primitives
+    if (valid) for (uint32_t i = contributes ? n_active_residual_params : 0; i < n_residual_params; i++) grad_residual_params_primitive[i] = 0.0f;
+
+    if (collect_residual_gradients) {
+        __syncwarp();
+        // warp-wide write using 16 byte stores where possible (the warp's first primitive is a multiple of 32)
+        const uint32_t warp_primitive_offset = thread_idx - lane_idx;
+        const uint32_t n_floats_warp = min(32u, n_primitives - warp_primitive_offset) * n_residual_params;
+        const float* collected_grad_residual_params_warp = collected_grad_residual_params + (threadIdx.x - lane_idx) * n_residual_params;
+        float* grad_residual_params_warp = grad_appearance.residual_params + warp_primitive_offset * n_residual_params;
+        const uint32_t n_float4_warp = n_floats_warp / 4;
+        for (uint32_t i = lane_idx; i < n_float4_warp; i += 32) reinterpret_cast<float4*>(grad_residual_params_warp)[i] = reinterpret_cast<const float4*>(collected_grad_residual_params_warp)[i];
+        for (uint32_t i = 4 * n_float4_warp + lane_idx; i < n_floats_warp; i += 32) grad_residual_params_warp[i] = collected_grad_residual_params_warp[i];
+    }
     if (!contributes) return;
 #endif
 

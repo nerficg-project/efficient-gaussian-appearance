@@ -99,7 +99,7 @@ namespace faster_gs {
         // write the site gradients (second pass over the site data)
         float3 grad_direction = ::make_float3(0.0f, 0.0f, 0.0f);
         site_ptr = sv_params + params_base_idx;
-        float* grad_site_ptr = grad_sv_params + params_base_idx;
+        float* grad_site_ptr = grad_sv_params;
         for (uint32_t site_idx = 0; site_idx < active_sites; ++site_idx, site_ptr += sv_params_per_site, grad_site_ptr += sv_params_per_site) {
             const float3 raw_site = ::make_float3(site_ptr[0], site_ptr[1], site_ptr[2]);
             const float site_length_rcp = 1.0f / fmaxf(sqrtf(dot(raw_site, raw_site)), sv_site_length_eps);

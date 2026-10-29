@@ -349,6 +349,7 @@ namespace faster_gs {
         const AppearanceInputs& appearance,
         const float3& grad_color,
         const AppearanceGradients& grad_appearance,
+        float* __restrict__ grad_residual_params,  // of this primitive
         const float3& position,
         const float3& cam_position,
         const uint8_t* __restrict__ fwd_ctx,
@@ -383,7 +384,7 @@ namespace faster_gs {
         #pragma unroll
         for (uint32_t i = 0; i < JIT_N_FEATURE_DIMS; i++) {
             const float feature = appearance.residual_params[primitive_idx * JIT_N_FEATURE_DIMS + i];
-            grad_appearance.residual_params[primitive_idx * JIT_N_FEATURE_DIMS + i] = loss_scale_rcp * encode_features_grad(
+            grad_residual_params[i] = loss_scale_rcp * encode_features_grad(
                 feature, [&](uint32_t j) -> float { return dL_dinput[j]; }, i);
         }
 

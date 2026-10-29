@@ -108,7 +108,7 @@ namespace faster_gs {
         const float3 direction = normalize(position - cam_position, direction_norm_rcp);
         const uint32_t params_base_idx = primitive_idx * JIT_NASG_N_LOBES * nasg_params_per_lobe;
         const float* lobe_ptr = nasg_params + params_base_idx;
-        float* grad_lobe_ptr = grad_nasg_params + params_base_idx;
+        float* grad_lobe_ptr = grad_nasg_params;
         float3 grad_direction = ::make_float3(0.0f, 0.0f, 0.0f);
 
         for (uint32_t lobe_idx = 0; lobe_idx < active_lobes; ++lobe_idx, lobe_ptr += nasg_params_per_lobe, grad_lobe_ptr += nasg_params_per_lobe) {
