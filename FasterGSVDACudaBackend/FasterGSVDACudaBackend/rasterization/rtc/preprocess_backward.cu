@@ -70,8 +70,22 @@ __global__ void JIT_KERNEL_NAME(
     const bool contributes = valid && primitive_n_touched_tiles[primitive_idx] > 0;
 #else
     const uint32_t primitive_idx = thread_idx;
-    if (primitive_idx >= n_primitives || primitive_n_touched_tiles[primitive_idx] == 0) return;
-    constexpr bool contributes = true;
+    if (primitive_idx >= n_primitives) return;
+    constexpr bool valid = true;
+    const bool contributes = primitive_n_touched_tiles[primitive_idx] > 0;
+#endif
+
+    // gradients are not zero-initialized
+    if (valid && !contributes) {
+        grad_means[primitive_idx] = ::make_float3(0.0f, 0.0f, 0.0f);
+        grad_scales[primitive_idx] = ::make_float3(0.0f, 0.0f, 0.0f);
+        grad_rotations[primitive_idx] = ::make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+#if JIT_APPEARANCE_MODEL == 0
+        grad_appearance.precomputed_colors[primitive_idx] = ::make_float3(0.0f, 0.0f, 0.0f);
+#endif
+    }
+#if JIT_APPEARANCE_MODEL == 0
+    if (!contributes) return;
 #endif
 
     // raw gradient w.r.t. the activated primitive color, as accumulated by the blend backward
@@ -82,9 +96,7 @@ __global__ void JIT_KERNEL_NAME(
     const float3 dL_dpre = color_activation_grad(color) * dL_dcolor;
 
     // shared base gradient
-    if (contributes && render_base) {
-        grad_appearance.base_colors[primitive_idx] = base_activation_grad(appearance.base_colors[primitive_idx]) * dL_dpre;
-    }
+    if (valid) grad_appearance.base_colors[primitive_idx] = contributes && render_base ? base_activation_grad(appearance.base_colors[primitive_idx]) * dL_dpre : ::make_float3(0.0f, 0.0f, 0.0f);
 #endif
 
     // load 3d mean
