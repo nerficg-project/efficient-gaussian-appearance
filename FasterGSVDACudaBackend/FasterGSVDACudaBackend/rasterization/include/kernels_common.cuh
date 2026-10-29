@@ -10,6 +10,12 @@ namespace cg = cooperative_groups;
 // instance pipeline shared by the training forward, optimized inference, and pruning score paths
 namespace faster_gs::rasterization::kernels {
 
+    // folds -0.5 and log2(e) into the conic so that blending evaluates the Gaussian with a single exp2
+    __device__ inline float4 scale_conic_for_exp2(const float4& conic_opacity) {
+        constexpr float log2e = 1.44269504089f;
+        return make_float4(-0.5f * log2e * conic_opacity.x, -log2e * conic_opacity.y, -0.5f * log2e * conic_opacity.z, conic_opacity.w);
+    }
+
     // internal linkage: a non-template __global__ definition in a header would collide at link time
     static __global__ void apply_depth_ordering_cu(
         const uint* __restrict__ primitive_indices_sorted,

@@ -90,7 +90,7 @@ namespace faster_gs::rasterization::kernels::forward {
                 const uint primitive_idx = instance_primitive_indices[current_fetch_idx];
                 collected_screen_bounds[thread_rank] = primitive_screen_bounds[primitive_idx];
                 collected_mean2d[thread_rank] = primitive_mean2d[primitive_idx];
-                collected_conic_opacity[thread_rank] = primitive_conic_opacity[primitive_idx];
+                collected_conic_opacity[thread_rank] = scale_conic_for_exp2(primitive_conic_opacity[primitive_idx]);
                 collected_color[thread_rank] = primitive_color[primitive_idx];
             }
             block.sync();
@@ -121,8 +121,8 @@ namespace faster_gs::rasterization::kernels::forward {
                     const float3 conic = make_float3(conic_opacity);
                     const float opacity = conic_opacity.w;
                     const float2 delta = collected_mean2d[j] - pixel;
-                    const float exponent = -0.5f * (conic.x * delta.x * delta.x + conic.z * delta.y * delta.y) - conic.y * delta.x * delta.y;
-                    const float gaussian = expf(fminf(exponent, 0.0f));
+                    const float exponent = delta.x * (conic.x * delta.x + conic.y * delta.y) + conic.z * delta.y * delta.y;
+                    const float gaussian = exp2f(fminf(exponent, 0.0f));
                     if (!config::original_opacity_interpretation && gaussian < config::min_alpha_threshold) continue;
                     const float alpha = opacity * gaussian;
                     if (config::original_opacity_interpretation && alpha < config::min_alpha_threshold) continue;
