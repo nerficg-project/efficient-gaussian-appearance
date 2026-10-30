@@ -182,7 +182,8 @@ __global__ void JIT_KERNEL_NAME(
         __syncwarp();
         // warp-wide write using 16 byte stores where possible (the warp's first primitive is a multiple of 32)
         const uint32_t warp_primitive_offset = thread_idx - lane_idx;
-        const uint32_t n_floats_warp = min(32u, n_primitives - warp_primitive_offset) * n_residual_params;
+        // the neural model keeps warps past the last primitive alive, which must not write
+        const uint32_t n_floats_warp = warp_primitive_offset < n_primitives ? min(32u, n_primitives - warp_primitive_offset) * n_residual_params : 0;
         const float* collected_grad_residual_params_warp = collected_grad_residual_params + (threadIdx.x - lane_idx) * n_residual_params;
         float* grad_residual_params_warp = grad_appearance.residual_params + warp_primitive_offset * n_residual_params;
         const uint32_t n_float4_warp = n_floats_warp / 4;
