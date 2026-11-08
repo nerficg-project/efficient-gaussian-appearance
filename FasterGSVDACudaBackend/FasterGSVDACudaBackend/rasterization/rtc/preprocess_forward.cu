@@ -24,8 +24,7 @@ __global__ void JIT_KERNEL_NAME(
     float2* __restrict__ primitive_mean2d,
     float4* __restrict__ primitive_conic_opacity,
     float3* __restrict__ primitive_color,
-    uint32_t* __restrict__ n_visible_primitives,
-    uint32_t* __restrict__ n_instances,
+    uint2* __restrict__ counters,
     const uint32_t n_primitives,
     const uint32_t appearance_degree,
     const uint32_t grid_width,
@@ -271,9 +270,9 @@ __global__ void JIT_KERNEL_NAME(
     primitive_color[primitive_idx] = color;
 #endif
 
-    const uint32_t offset = atomicAdd(n_visible_primitives, 1);
+    const uint32_t offset = atomicAdd(&counters[0].x, 1);
     const uint32_t depth_key = __float_as_uint(depth);
     primitive_depth_keys[offset] = depth_key;
     primitive_indices[offset] = primitive_idx;
-    atomicAdd(n_instances, n_touched_tiles);
+    atomicAdd(&counters[0].y, n_touched_tiles);
 }

@@ -30,10 +30,11 @@ namespace faster_gs::rasterization {
         const float near_plane,
         const float far_plane,
         const bool proper_antialiasing,
-        const bool render_base)
+        const bool render_base,
+        const cudaStream_t stream)
     {
         rtc_preprocess->launch(
-            div_round_up(n_primitives, config::block_size_preprocess), config::block_size_preprocess, 0, nullptr,
+            div_round_up(n_primitives, config::block_size_preprocess), config::block_size_preprocess, 0, stream,
             means,
             scales,
             rotations,
@@ -48,8 +49,7 @@ namespace faster_gs::rasterization {
             primitive_buffers.mean2d,
             primitive_buffers.conic_opacity,
             primitive_buffers.color,
-            primitive_buffers.n_visible_primitives,
-            primitive_buffers.n_instances,
+            primitive_buffers.counters,
             n_primitives,
             appearance_degree,
             grid.x,

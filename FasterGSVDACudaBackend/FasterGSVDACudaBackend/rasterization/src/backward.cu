@@ -44,7 +44,8 @@ void faster_gs::rasterization::backward(
     const float center_x,
     const float center_y,
     const bool proper_antialiasing,
-    const bool render_base)
+    const bool render_base,
+    const cudaStream_t stream)
 {
     const dim3 grid(div_round_up(width, config::tile_width), div_round_up(height, config::tile_height), 1);
     const int n_tiles = grid.x * grid.y;
@@ -57,7 +58,7 @@ void faster_gs::rasterization::backward(
     // note that with c++20 one could use a templated lambda to improve readability here
     auto dispatch_rasterize_backward = [&](const uint* instance_primitive_indices) {
         const auto blend_backward_kernel = grad_mean2d_abs_helper != nullptr ? kernels::backward::blend_backward_cu<true> : kernels::backward::blend_backward_cu<false>;
-        blend_backward_kernel<<<n_buckets, 32>>>(
+        blend_backward_kernel<<<n_buckets, 32, 0, stream>>>(
             tile_buffers.instance_ranges,
             tile_buffers.buckets_offset,
             instance_primitive_indices,
@@ -81,6 +82,7 @@ void faster_gs::rasterization::backward(
             width,
             height,
             grid.x,
+            n_tiles,
             proper_antialiasing
         );
         CHECK_CUDA(config::debug, "blend_backward")
@@ -98,7 +100,7 @@ void faster_gs::rasterization::backward(
 
     // jit-compiled preprocess backward (the neural appearance passes its dynamic shared memory requirement)
     rtc_preprocess_backward->launch(
-        div_round_up(n_primitives, config::block_size_preprocess), config::block_size_preprocess, backward_shmem_bytes, nullptr,
+        div_round_up(n_primitives, config::block_size_preprocess), config::block_size_preprocess, backward_shmem_bytes, stream,
         means,
         scales,
         rotations,

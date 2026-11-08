@@ -7,6 +7,8 @@
 #include "torch_utils.h"
 #include "rasterization_config.h"
 #include "utils.h"
+#include <ATen/cuda/CUDAContext.h>
+#include <c10/cuda/CUDAGuard.h>
 #include <stdexcept>
 #include <functional>
 #include <tuple>
@@ -38,6 +40,8 @@ faster_gs::rasterization::forward_wrapper(
     const bool render_base,
     const bool render_residual)
 {
+    const at::cuda::CUDAGuard device_guard(means.device());
+
     // all optimizable tensors must be passed as contiguous CUDA floating point tensors
     CHECK_INPUT(config::debug, means, "means");
     CHECK_INPUT(config::debug, scales, "scales");
@@ -107,7 +111,8 @@ faster_gs::rasterization::forward_wrapper(
         near_plane,
         far_plane,
         proper_antialiasing,
-        render_base
+        render_base,
+        at::cuda::getCurrentCUDAStream()
     );
 
     return {
@@ -156,6 +161,8 @@ faster_gs::rasterization::backward_wrapper(
     const int n_buckets,
     const int instance_primitive_indices_selector)
 {
+    const at::cuda::CUDAGuard device_guard(means.device());
+
     const int n_primitives = means.size(0);
     const torch::TensorOptions float_options = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA);
     const bool precomputed = precomputed_colors.numel() > 0;
@@ -230,7 +237,8 @@ faster_gs::rasterization::backward_wrapper(
         center_x,
         center_y,
         proper_antialiasing,
-        render_base
+        render_base,
+        at::cuda::getCurrentCUDAStream()
     );
 
     if (fused_mlp) grad_mlp_weights = grad_mlp_weights.to(torch::kFloat).mul_(1.0f / config::mlp_grad_loss_scale);
@@ -267,6 +275,8 @@ faster_gs::rasterization::inference_wrapper(
     const bool to_chw,
     const bool clamp_output)
 {
+    const at::cuda::CUDAGuard device_guard(means.device());
+
     const int n_primitives = means.size(0);
     const torch::TensorOptions float_options = torch::TensorOptions().dtype(torch::kFloat).device(torch::kCUDA);
     const torch::TensorOptions byte_options = torch::TensorOptions().dtype(torch::kByte).device(torch::kCUDA);
@@ -317,7 +327,8 @@ faster_gs::rasterization::inference_wrapper(
         proper_antialiasing,
         render_base,
         to_chw,
-        clamp_output
+        clamp_output,
+        at::cuda::getCurrentCUDAStream()
     );
 
     return image;
@@ -351,6 +362,8 @@ faster_gs::rasterization::pruning_scores_wrapper(
     const bool render_base,
     const bool render_residual)
 {
+    const at::cuda::CUDAGuard device_guard(means.device());
+
     const int n_primitives = means.size(0);
     const torch::TensorOptions byte_options = torch::TensorOptions().dtype(torch::kByte).device(torch::kCUDA);
     torch::Tensor primitive_buffers = torch::empty({0}, byte_options);
@@ -397,6 +410,7 @@ faster_gs::rasterization::pruning_scores_wrapper(
         near_plane,
         far_plane,
         proper_antialiasing,
-        render_base
+        render_base,
+        at::cuda::getCurrentCUDAStream()
     );
 }

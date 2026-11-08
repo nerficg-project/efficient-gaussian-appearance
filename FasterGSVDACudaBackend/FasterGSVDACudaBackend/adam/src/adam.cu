@@ -2,6 +2,8 @@
 #include "adam_config.h"
 #include "torch_utils.h"
 #include "utils.h"
+#include <ATen/cuda/CUDAContext.h>
+#include <c10/cuda/CUDAGuard.h>
 #include <cmath>
 
 namespace faster_gs::adam {
@@ -50,6 +52,8 @@ namespace faster_gs::adam {
         const double beta2,
         const double epsilon)
     {
+        const at::cuda::CUDAGuard device_guard(param.device());
+
         CHECK_INPUT(config::debug, param, "param");
         CHECK_INPUT(config::debug, exp_avg, "exp_avg");
         CHECK_INPUT(config::debug, exp_avg_sq, "exp_avg_sq");
@@ -67,7 +71,7 @@ namespace faster_gs::adam {
         step_sizes.count = static_cast<int>(learning_rates.size());
         for (int i = 0; i < step_sizes.count; i++) step_sizes.values[i] = static_cast<float>(learning_rates[i] * bias_correction1_rcp);
 
-        adam_step_cu<<<div_round_up(n_elements, config::block_size_adam_step), config::block_size_adam_step>>>(
+        adam_step_cu<<<div_round_up(n_elements, config::block_size_adam_step), config::block_size_adam_step, 0, at::cuda::getCurrentCUDAStream()>>>(
             param_grad.data_ptr<float>(),
             param.data_ptr<float>(),
             exp_avg.data_ptr<float>(),
